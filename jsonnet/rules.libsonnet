@@ -10,22 +10,12 @@ function(params) {
         {
           expr: |||
             100 * ((
-                count by (job, namespace, service) (up{pod!=""} == 0 and on(pod, namespace) topk by(pod, namespace) (1, kube_pod_info))
-                /
-                count by (job, namespace, service) (up{pod!=""} and on(pod, namespace) topk by(pod, namespace) (1, kube_pod_info))
-              )
-              or
-              (
-                count by (job, namespace, service) (up{pod=""} == 0)
-                /
-                count by (job, namespace, service) (up{pod=""})
-              )
-              or
-              (
-                count by (job, namespace, service) (up == 0 and on() absent(up{service='kube-state-metrics'}))
-                /
-                count by (job, namespace, service) (up and on() absent(up{service='kube-state-metrics'}))
-              )) > 10
+              1 - sum  (up and on(namespace, pod) kube_pod_info) by (job, namespace, service) /
+                  count(up and on(namespace, pod) kube_pod_info) by (job, namespace, service)
+            ) or (
+              count(up == 0) by (job, namespace, service) /
+              count(up)      by (job, namespace, service)
+            )) > 10
           |||,
           alert: 'TargetDown',
           'for': '15m',
